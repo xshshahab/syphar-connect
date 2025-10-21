@@ -17,6 +17,8 @@ import JobApplicants from "./admin/job/components/JobApplicants";
 import { ErrorPage } from "./shared/ErrorPage";
 import { ProtectedRoutes } from "./routes/ProtectedRoutes";
 import { AuthRoutes } from "./routes/AuthRoutes";
+import About from "./pages/about/About";
+import Contact from "./pages/contact/Contact";
 
 const App: React.FC = () => {
   const appRouter = createBrowserRouter([
@@ -44,6 +46,14 @@ const App: React.FC = () => {
         {
           path: "",
           element: <Home />,
+        },
+        {
+          path: "/about",
+          element: <About />,
+        },
+        {
+          path: "/contact",
+          element: <Contact />,
         },
         {
           path: "/jobs",

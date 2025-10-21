@@ -20,7 +20,7 @@ const JobDescription: React.FC = () => {
 
   const isInitiallyApplied =
     singleJob?.applications?.some(
-      (application) => application.applicant === user?._id
+      (application) => application?.applicant === user?._id
     ) || false;
 
   const [isApplied, setIsApplied] = useState(isInitiallyApplied);
@@ -68,10 +68,9 @@ const JobDescription: React.FC = () => {
 
   return (
     <section className="max-w-7xl mx-auto px-4 md:px-8 py-8 space-y-8">
-      {/* Header: Job Title + Badges + Apply Button */}
-      <div className="flex flex-col md:flex-row md:justify-between md:items-center bg-white shadow-md rounded-lg p-6">
+      <div className="flex flex-col md:flex-row md:justify-between md:items-center border shadow-md rounded-lg p-6">
         <div className="space-y-3">
-          <h1 className="text-3xl font-bold text-gray-800">
+          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200">
             {singleJob?.title || ""}
           </h1>
 
@@ -93,11 +92,11 @@ const JobDescription: React.FC = () => {
       </div>
 
       {/* Job Details Card */}
-      <div className="bg-white shadow-md rounded-lg p-6 space-y-4">
-        <h2 className="text-2xl font-semibold text-gray-700 border-b pb-2">
+      <div className="border shadow-md rounded-lg p-6 space-y-4">
+        <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 border-b pb-2">
           Job Details
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 dark:text-gray-200 text-gray-700">
           <div>
             <p>
               <span className="font-semibold">Role:</span>{" "}
@@ -128,10 +127,10 @@ const JobDescription: React.FC = () => {
           </div>
         </div>
         <div className="mt-4">
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">
+          <h3 className="text-xl font-semibold dark:text-gray-200 text-gray-700 mb-2">
             Job Description
           </h3>
-          <p className="text-gray-600 leading-relaxed">
+          <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
             {singleJob?.description || "No description available."}
           </p>
         </div>
