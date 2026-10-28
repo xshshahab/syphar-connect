@@ -27,3 +27,6 @@ pnpm-debug.log*
 
 # Misc
 *.tgz
+
+# Uploaded files (stored outside backend/ in development)
+uploads/
