@@ -2,11 +2,12 @@ import React from "react";
 import Layout from "./layout/Layout";
 import Login from "./auth/login/Login";
 import SignUp from "./auth/signup/SignUp";
-import { createBrowserRouter, RouterProvider } from "react-router";
+import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 import Home from "./pages/home/Home";
 import Jobs from "./pages/jobs/Jobs";
-import BrowsePage from "./pages/browse/BrowsePage";
+import SearchPage from "./pages/search/SearchPage";
 import Profile from "./pages/profile/Profile";
+import AppliedJobs from "./pages/profile/AppliedJobs";
 import JobDescription from "./pages/jobs/pages/JobDescription";
 import AdminCompanies from "./admin/companies/AdminCompanies";
 import AdminJob from "./admin/job/AdminJob";
@@ -19,9 +20,18 @@ import { ProtectedRoutes } from "./routes/ProtectedRoutes";
 import { AuthRoutes } from "./routes/AuthRoutes";
 import About from "./pages/about/About";
 import Contact from "./pages/contact/Contact";
+import Privacy from "./pages/legal/Privacy";
+import Terms from "./pages/legal/Terms";
+import Onboarding from "./pages/onboarding/Onboarding";
+import { RequireAuth } from "./routes/RequireAuth";
+import AdminApplicants from "./admin/job/AdminApplicants";
 
 const App: React.FC = () => {
   const appRouter = createBrowserRouter([
+    {
+      path: "/welcome",
+      element: <Onboarding />,
+    },
     {
       path: "/auth/login",
       element: (
@@ -45,7 +55,11 @@ const App: React.FC = () => {
       children: [
         {
           path: "",
-          element: <Home />,
+          element: (
+            <RequireAuth>
+              <Home />
+            </RequireAuth>
+          ),
         },
         {
           path: "/about",
@@ -56,20 +70,57 @@ const App: React.FC = () => {
           element: <Contact />,
         },
         {
+          path: "/privacy",
+          element: <Privacy />,
+        },
+        {
+          path: "/terms",
+          element: <Terms />,
+        },
+        {
           path: "/jobs",
-          element: <Jobs />,
+          element: (
+            <RequireAuth>
+              <Jobs />
+            </RequireAuth>
+          ),
         },
         {
           path: "/description/:id",
-          element: <JobDescription />,
+          element: (
+            <RequireAuth>
+              <JobDescription />
+            </RequireAuth>
+          ),
         },
         {
+          path: "/search",
+          element: (
+            <RequireAuth>
+              <SearchPage />
+            </RequireAuth>
+          ),
+        },
+        {
+          // old Browse links keep working
           path: "/browse",
-          element: <BrowsePage />,
+          element: <Navigate to="/search" replace />,
         },
         {
           path: "/profile",
-          element: <Profile />,
+          element: (
+            <RequireAuth>
+              <Profile />
+            </RequireAuth>
+          ),
+        },
+        {
+          path: "/applied-jobs",
+          element: (
+            <RequireAuth>
+              <AppliedJobs />
+            </RequireAuth>
+          ),
         },
         {
           path: "/admin/companies",
@@ -92,6 +143,14 @@ const App: React.FC = () => {
           element: (
             <ProtectedRoutes>
               <CompanySetup />
+            </ProtectedRoutes>
+          ),
+        },
+        {
+          path: "/admin/applicants",
+          element: (
+            <ProtectedRoutes>
+              <AdminApplicants />
             </ProtectedRoutes>
           ),
         },

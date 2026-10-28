@@ -1,14 +1,17 @@
+import RichText from "@/shared/RichText";
 import { Button } from "@/components/ui/button";
 import { useGetSingleJob } from "@/hooks/useGetSingleJob";
 import { setSingleJob } from "@/redux/slice/jobSlice";
 import type { RootState } from "@/redux/store";
 import type { Job } from "@/redux/types/jobTypes";
 import CustomBadge from "@/shared/CustomBadge";
+import SaveJobButton from "@/shared/SaveJobButton";
+import ResumeUploadDialog from "@/shared/ResumeUploadDialog";
 import { APPLICATION_API_ENDPOINT } from "@/utils/constant";
 import axios from "axios";
 import React, { useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useParams } from "react-router";
+import { Link, useParams } from "react-router";
 import { toast } from "sonner";
 
 const JobDescription: React.FC = () => {
@@ -17,13 +20,18 @@ const JobDescription: React.FC = () => {
 
   const { singleJob } = useSelector((state: RootState) => state.job);
   const { user } = useSelector((state: RootState) => state.auth);
+  const isRecruiter = user?.role === "recruiter";
+  const isOwner = singleJob?.created_by === user?._id;
 
   const isInitiallyApplied =
     singleJob?.applications?.some(
-      (application) => application?.applicant === user?._id
+      (application) =>
+        typeof application === "object" &&
+        application?.applicant === user?._id
     ) || false;
 
   const [isApplied, setIsApplied] = useState(isInitiallyApplied);
+  const [askResume, setAskResume] = useState<boolean>(false);
   const dispatch = useDispatch();
 
   const applyJobHandler = async () => {
@@ -64,6 +72,15 @@ const JobDescription: React.FC = () => {
       console.error("ERROR! apply job: ", error);
     }
   };
+  // applying needs a resume: ask for one first if the profile has none
+  const handleApplyClick = () => {
+    if (!user?.profile?.resume) {
+      setAskResume(true);
+      return;
+    }
+    applyJobHandler();
+  };
+
   useGetSingleJob(jobId, setIsApplied);
 
   return (
@@ -80,14 +97,28 @@ const JobDescription: React.FC = () => {
             salary={singleJob?.salary || ""}
           />
         </div>
-        <div className="mt-4 md:mt-0">
-          <Button
-            onClick={isApplied ? undefined : () => applyJobHandler()}
-            disabled={isApplied}
-            className="px-6 py-2 font-semibold rounded-lg"
-          >
-            {isApplied ? "Already Applied" : "Apply Now"}
-          </Button>
+        <div className="mt-4 flex flex-wrap items-center gap-2 md:mt-0">
+          {isRecruiter ? (
+            // recruiters do not apply; the owner goes to the applicants instead
+            isOwner && (
+              <Button asChild className="px-6 py-2 font-semibold rounded-lg">
+                <Link to={`/admin/ad-jobs/${jobId}/applicants`}>
+                  View applicants ({singleJob?.applications?.length ?? 0})
+                </Link>
+              </Button>
+            )
+          ) : (
+            <>
+              {singleJob && <SaveJobButton job={singleJob} variant="full" />}
+              <Button
+                onClick={isApplied ? undefined : handleApplyClick}
+                disabled={isApplied}
+                className="px-6 py-2 font-semibold rounded-lg"
+              >
+                {isApplied ? "Already Applied" : "Apply Now"}
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -108,7 +139,11 @@ const JobDescription: React.FC = () => {
             </p>
             <p>
               <span className="font-semibold">Experience:</span>{" "}
-              {singleJob?.experienceLevel || "-"} yrs
+              {singleJob?.experienceLevel == null
+                ? "-"
+                : singleJob.experienceLevel === 0
+                ? "Fresher"
+                : `${singleJob.experienceLevel} yrs`}
             </p>
           </div>
           <div>
@@ -130,11 +165,27 @@ const JobDescription: React.FC = () => {
           <h3 className="text-xl font-semibold dark:text-gray-200 text-gray-700 mb-2">
             Job Description
           </h3>
-          <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-            {singleJob?.description || "No description available."}
-          </p>
+          {singleJob?.description ? (
+            <RichText
+              html={singleJob.description}
+              className="text-gray-600 dark:text-gray-300 leading-relaxed"
+            />
+          ) : (
+            <p className="text-gray-600 dark:text-gray-300">
+              No description available.
+            </p>
+          )}
         </div>
       </div>
+
+      <ResumeUploadDialog
+        open={askResume}
+        onClose={() => setAskResume(false)}
+        onUploaded={() => {
+          setAskResume(false);
+          applyJobHandler();
+        }}
+      />
     </section>
   );
 };

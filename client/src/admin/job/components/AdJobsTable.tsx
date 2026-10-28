@@ -1,12 +1,12 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import {
-  ArrowUpRight,
   ChevronsUpDown,
   Edit2,
   Eye,
   MoreHorizontal,
   Plus,
+  Users,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type { ColumnDef } from "@tanstack/react-table";
+import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Link, useNavigate } from "react-router";
@@ -24,11 +25,44 @@ import type { RootState } from "@/redux/store";
 
 export type AdminJobsTable = {
   id: string;
+  companyId: string;
   logo: string;
+  title: string;
   companyName: string;
-  website: string;
   role: string;
+  applicants: number;
   date: string;
+};
+
+const ActionsCell: React.FC<{ job: AdminJobsTable }> = ({ job }) => {
+  const navigate = useNavigate();
+
+  return (
+    <div className="flex justify-end">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="h-8 w-8 p-0">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            onClick={() => navigate(`/admin/ad-jobs/${job.id}/applicants`)}
+            className="cursor-pointer"
+          >
+            <Eye className="mr-2 h-4 w-4" /> View applicants
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => navigate(`/admin/companies/${job.companyId}`)}
+            className="cursor-pointer"
+          >
+            <Edit2 className="mr-2 h-4 w-4" /> Edit company
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
 };
 
 export const columns: ColumnDef<AdminJobsTable>[] = [
@@ -56,95 +90,80 @@ export const columns: ColumnDef<AdminJobsTable>[] = [
     size: 30,
   },
   {
-    accessorKey: "companyName",
+    accessorKey: "title",
     header: ({ column }) => (
       <Button
         variant="ghost"
         className="px-0 font-semibold "
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
       >
-        Company Details
+        Job
         <span className="ml-1 opacity-50">
           <ChevronsUpDown />
         </span>
       </Button>
     ),
     cell: ({ row }) => {
-      const { logo, companyName } = row.original;
+      const { logo, companyName, title } = row.original;
       return (
         <div className="flex items-center gap-3">
-          <Avatar className="size-9">
+          <Avatar className="size-9 rounded-lg">
             <AvatarImage src={logo || ""} alt={companyName} />
-            <AvatarFallback>{companyName.charAt(0)}</AvatarFallback>
+            <AvatarFallback className="rounded-lg">
+              {companyName.charAt(0)}
+            </AvatarFallback>
           </Avatar>
-          <span className="font-medium ">{companyName}</span>
+          <div className="min-w-0">
+            <p className="truncate font-medium">{title}</p>
+            <p className="truncate text-xs text-muted-foreground">
+              {companyName}
+            </p>
+          </div>
         </div>
       );
     },
   },
   {
-    accessorKey: "website",
-    header: () => <div className="text-left font-semibold ">Website URL</div>,
-    cell: ({ row }) => (
-      <div className="text-sm ">
-        <Link
-          className="flex items-center gap-2 hover:underline"
-          to={row.getValue("website") as string}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <ArrowUpRight size={16} />
-          {row.getValue("website")}
-        </Link>
-      </div>
-    ),
-  },
-  {
     accessorKey: "role",
-    header: () => <div className="text-left font-semibold ">Role</div>,
+    header: () => <div className="text-left font-semibold ">Type</div>,
     cell: ({ row }) => <div className="text-sm ">{row.getValue("role")}</div>,
   },
   {
+    accessorKey: "applicants",
+    header: ({ column }) => (
+      <Button
+        variant="ghost"
+        className="px-0 font-semibold "
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Applicants
+        <span className="ml-1 opacity-50">
+          <ChevronsUpDown />
+        </span>
+      </Button>
+    ),
+    cell: ({ row }) => {
+      const count = row.original.applicants;
+      return (
+        <Link to={`/admin/ad-jobs/${row.original.id}/applicants`}>
+          <Badge variant={count > 0 ? "default" : "secondary"}>
+            <Users className="size-3" />
+            {count}
+          </Badge>
+        </Link>
+      );
+    },
+  },
+  {
     accessorKey: "date",
-    header: () => <div className="text-left font-semibold ">Added On</div>,
+    header: () => <div className="text-left font-semibold ">Posted On</div>,
     cell: ({ row }) => <div className="text-sm ">{row.getValue("date")}</div>,
   },
   {
     id: "actions",
     enableHiding: false,
     header: () => <div className="text-right font-semibold ">Actions</div>,
-    cell: ({ row }) => {
-      const id = row.original.id;
-      const navigate = useNavigate();
-
-      const handleEdit = () => navigate(`/admin/companies/${id}`);
-      const handleViewApplicants = () =>
-        navigate(`/admin/ad-jobs/${id}/applicants`);
-
-      return (
-        <div className="flex justify-end">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleEdit} className="cursor-pointer">
-                <Edit2 className="mr-2 h-4 w-4" /> Edit
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={handleViewApplicants}
-                className="cursor-pointer"
-              >
-                <Eye className="mr-2 h-4 w-4" /> Applicants
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      );
-    },
+    cell: ({ row }) => <ActionsCell job={row.original} />,
   },
 ];
 
@@ -155,10 +174,12 @@ const AdJobsTable: React.FC = () => {
   const data: AdminJobsTable[] = adminAllJobs
     ? adminAllJobs.map((job) => ({
         id: job._id || "",
-        logo: job.company.logo || "",
-        companyName: job.company.name || "",
-        website: job.company.website || "",
+        companyId: job.company?._id || "",
+        logo: job.company?.logo || "",
+        title: job.title || "",
+        companyName: job.company?.name || "",
         role: job.jobType || "",
+        applicants: job.applications?.length ?? 0,
         date: job.createdAt.split("T")[0] || "",
       }))
     : [];
@@ -166,7 +187,7 @@ const AdJobsTable: React.FC = () => {
   return (
     <div className="mt-4 rounded-xl border p-4 shadow-sm">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold">Posted Job Directory</h2>
+        <h2 className="text-lg font-semibold">Your Posted Jobs</h2>
         <Button
           variant={"outline"}
           onClick={() => navigate("/admin/ad-jobs/post-job")}
@@ -178,8 +199,8 @@ const AdJobsTable: React.FC = () => {
       <DynamicTable
         data={data}
         columns={columns}
-        filterColumn="companyName"
-        tableCaption="A list of your recent posted jobs"
+        filterColumn="title"
+        tableCaption="Your posted jobs and how many people applied"
         key={Math.floor(Math.random() * 687945349)}
       />
     </div>

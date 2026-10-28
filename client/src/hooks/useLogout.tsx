@@ -19,11 +19,10 @@ export const useLogout = () => {
       if (res?.data?.success) {
         await storage.removeItem("persist:root");
         dispatch(logout());
-        localStorage.clear();
         sessionStorage.clear();
 
         toast.success(res.data.message);
-        navigate("/");
+        navigate("/auth/login", { replace: true });
       }
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {

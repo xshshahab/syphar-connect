@@ -6,9 +6,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { setSearchQuery } from "@/redux/slice/jobSlice";
 import React from "react";
-import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router";
 
 const categories = [
@@ -21,22 +19,20 @@ const categories = [
 ];
 
 const CategoryCarousel: React.FC = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
 
   const searchQueryHandler = (query: string) => {
-    dispatch(setSearchQuery(query));
-    navigate("/browse");
+    navigate(`/search?role=${encodeURIComponent(query)}`);
   };
 
   return (
-    <div className="my-10 mx-auto w-full max-w-xl relative">
+    <div className="my-10 mx-auto w-full max-w-xl relative px-4 sm:px-0">
       <Carousel>
         <CarouselContent>
           {categories.map((category, idx) => (
             <CarouselItem
               key={idx}
-              className="md:basis-1/2 lg:basis-1/3 flex justify-center"
+              className="basis-1/2 lg:basis-1/3 flex justify-center"
             >
               <Button
                 onClick={() => searchQueryHandler(category)}
@@ -50,8 +46,8 @@ const CategoryCarousel: React.FC = () => {
         </CarouselContent>
 
         {/* Prev/Next Buttons */}
-        <CarouselPrevious className="left-[-2rem]" />
-        <CarouselNext className="right-[-2rem]" />
+        <CarouselPrevious className="left-[-2rem] hidden sm:inline-flex" />
+        <CarouselNext className="right-[-2rem] hidden sm:inline-flex" />
       </Carousel>
     </div>
   );

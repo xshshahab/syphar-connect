@@ -52,7 +52,7 @@ export default function StatsSection() {
 
               <div className="mt-6 space-y-3">
                 <cite className="block font-medium">
-                  Md. Shahabuddin, Founder CEO of SypharConnectLLP
+                  Md. Shahabuddin, Founder CEO of SypharConnect
                 </cite>
                 <img
                   className="size-16 rounded-full "

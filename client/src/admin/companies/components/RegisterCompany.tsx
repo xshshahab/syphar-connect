@@ -48,7 +48,7 @@ const RegisterCompany: React.FC = () => {
   };
 
   return (
-    <div className="mt-10 h-screen w-full   px-6">
+    <div className="mt-10 min-h-screen w-full px-4 md:px-6">
       <div className="">
         <h1 className="text-2xl font-semibold">Register Your Company</h1>
         <p className="mt-2 text-sm text-gray-500">
@@ -65,7 +65,7 @@ const RegisterCompany: React.FC = () => {
             id="company-name"
             name="company-name"
             type="text"
-            placeholder="Enter your company name (e.g., Syphar Connect LLP)"
+            placeholder="Enter your company name (e.g., SypharConnect)"
           />
         </section>
 

@@ -20,8 +20,11 @@ export interface Job {
   experienceLevel: number;
   company: Company;
   created_by: string;
-  applications: string[];
+  // ids, or application records once the job has been populated
+  applications: (string | { _id?: string; applicant?: string })[];
   createdAt: string;
+  // only sent for a recruiter's own jobs: applications not yet accepted/rejected
+  pendingApplications?: number;
 }
 
 export interface AllAppliedJobs {
@@ -32,6 +35,8 @@ export interface AllAppliedJobs {
   status: string;
 }
 
+import type { JobFilters } from "@/utils/jobFilters";
+
 export interface JobState {
   loading: boolean;
   allJobs: Job[];
@@ -39,5 +44,7 @@ export interface JobState {
   adminAllJobs: Job[];
   error?: string;
   allAppliedJobs: AllAppliedJobs[];
+  savedJobs: Job[];
   searchQuery: string;
+  filters: JobFilters;
 }

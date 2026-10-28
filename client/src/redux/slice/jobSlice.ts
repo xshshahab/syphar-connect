@@ -1,5 +1,6 @@
 import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
 import type { Job, JobState } from "../types/jobTypes";
+import { emptyFilters, type FilterGroupKey } from "@/utils/jobFilters";
 
 const initialState: JobState = {
   loading: false,
@@ -8,7 +9,9 @@ const initialState: JobState = {
   adminAllJobs: [],
   error: undefined,
   allAppliedJobs: [],
+  savedJobs: [],
   searchQuery: "",
+  filters: emptyFilters,
 };
 
 const jobSlice = createSlice({
@@ -30,6 +33,26 @@ const jobSlice = createSlice({
     setAllAppliedJobs: (state, action) => {
       state.allAppliedJobs = action.payload;
     },
+    setSavedJobs: (state, action: PayloadAction<Job[]>) => {
+      state.savedJobs = action.payload;
+    },
+    // tick / untick one checkbox of a filter group
+    toggleFilter: (
+      state,
+      action: PayloadAction<{ group: FilterGroupKey; value: string }>
+    ) => {
+      const { group, value } = action.payload;
+      // state saved before filters existed has no `filters`
+      const filters = state.filters ?? { ...emptyFilters };
+      const current = filters[group];
+      filters[group] = current.includes(value)
+        ? current.filter((item) => item !== value)
+        : [...current, value];
+      state.filters = filters;
+    },
+    clearFilters: (state) => {
+      state.filters = { ...emptyFilters };
+    },
     setError: (state, action: PayloadAction<string | undefined>) => {
       state.error = action.payload;
     },
@@ -47,5 +70,8 @@ export const {
   setAllAppliedJobs,
   setAdminAllJobs,
   setSearchQuery,
+  setSavedJobs,
+  toggleFilter,
+  clearFilters,
 } = jobSlice.actions;
 export default jobSlice.reducer;

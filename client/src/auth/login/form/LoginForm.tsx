@@ -2,10 +2,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Link, useNavigate } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { useState } from "react";
 import { Eye, EyeOff, Loader } from "lucide-react";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { USER_API_ENDPOINT } from "@/utils/constant";
 import axios from "axios";
@@ -18,10 +17,11 @@ export function LoginForm({
   ...props
 }: React.ComponentProps<"form">) {
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [role, setRole] = useState<string>("student");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = (location.state as { from?: string } | null)?.from ?? "/";
 
   const dispatch = useDispatch<AppDispatch>();
   const { loading } = useSelector((store: RootState) => store.auth);
@@ -33,7 +33,6 @@ export function LoginForm({
       const formData = {
         email,
         password,
-        role,
       };
 
       const res = await axios.post(`${USER_API_ENDPOINT}/login`, formData, {
@@ -42,7 +41,7 @@ export function LoginForm({
       });
 
       if (res.data.success) {
-        navigate("/");
+        navigate(from, { replace: true });
         dispatch(setUser(res?.data?.user || null));
         toast.success(res.data.message);
       }
@@ -119,25 +118,6 @@ export function LoginForm({
             </button>
           </div>
         </div>
-        {/* Role */}
-        <div className="grid gap-3">
-          <Label>Role</Label>
-          <RadioGroup
-            value={role}
-            onValueChange={setRole}
-            className="flex gap-4 mt-1"
-          >
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="student" id="student" />
-              <Label htmlFor="student">Student</Label>
-            </div>
-            <div className="flex items-center gap-2">
-              <RadioGroupItem value="recruiter" id="recruiter" />
-              <Label htmlFor="recruiter">Recruiter</Label>
-            </div>
-          </RadioGroup>
-        </div>
-
         {/* Submit */}
         <Button type="submit" className="w-full" disabled={loading}>
           {loading ? (

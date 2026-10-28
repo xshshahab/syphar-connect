@@ -8,333 +8,379 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import RichTextEditor from "@/shared/RichTextEditor";
+import { useGetAllCompany } from "@/hooks/useGetAllCompany";
 import type { RootState } from "@/redux/store";
-import { JOB_API_ENDPOINT } from "@/utils/constant";
+import { JOB_API_ENDPOINT, JOB_TYPES } from "@/utils/constant";
+import { htmlToText } from "@/utils/richText";
 import axios from "axios";
-import { Loader } from "lucide-react";
-import React, { useReducer, useState } from "react";
+import { ArrowLeft, Loader, X } from "lucide-react";
+import React, { useState } from "react";
 import { useSelector } from "react-redux";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { toast } from "sonner";
 
-type InputType = {
+type FormState = {
+  title: string;
+  companyId: string;
+  jobType: string;
+  location: string;
+  experience: string;
+  salary: string;
+  position: string;
+  description: string;
+  requirements: string[];
+};
+
+const initialState: FormState = {
+  title: "",
+  companyId: "",
+  jobType: "",
+  location: "",
+  experience: "",
+  salary: "",
+  position: "1",
+  description: "",
+  requirements: [],
+};
+
+const Field: React.FC<{
+  label: string;
+  htmlFor: string;
+  hint?: string;
+  className?: string;
+  children: React.ReactNode;
+}> = ({ label, htmlFor, hint, className, children }) => (
+  <div className={`space-y-2 ${className ?? ""}`}>
+    <Label htmlFor={htmlFor} className="text-sm font-medium">
+      {label}
+      <span className="text-red-500">*</span>
+    </Label>
+    {children}
+    {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+  </div>
+);
+
+const Section: React.FC<{
   title: string;
   description: string;
-  requirements: string;
-  salary: number;
-  location: string;
-  jobType: string;
-  experience: string;
-  position: number;
-  companyId: string;
-};
-
-const initialState: InputType = {
-  title: "",
-  description: "",
-  requirements: "",
-  salary: 0,
-  location: "",
-  jobType: "",
-  experience: "",
-  position: 0,
-  companyId: "",
-};
-
-type Action =
-  | {
-      type: "SET_FIELD";
-      field: keyof InputType;
-      value: string | number;
-    }
-  | {
-      type: "SET_COMPANY";
-      companyId: string;
-    };
-
-const reducer = (state: InputType, action: Action): InputType => {
-  switch (action.type) {
-    case "SET_FIELD":
-      return { ...state, [action.field]: action.value };
-    case "SET_COMPANY":
-      return { ...state, companyId: action.companyId };
-    default:
-      return state;
-  }
-};
+  children: React.ReactNode;
+}> = ({ title, description, children }) => (
+  <section className="rounded-xl border p-5 md:p-6">
+    <div className="mb-5">
+      <h2 className="text-lg font-semibold">{title}</h2>
+      <p className="text-sm text-muted-foreground">{description}</p>
+    </div>
+    {children}
+  </section>
+);
 
 const PostNewJob: React.FC = () => {
-  const [input, setInput] = useReducer(reducer, initialState);
+  useGetAllCompany();
+
+  const [form, setForm] = useState<FormState>(initialState);
+  const [requirementInput, setRequirementInput] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
   const navigate = useNavigate();
 
   const { allCompany } = useSelector((state: RootState) => state.company);
+  const hasCompanies = Array.isArray(allCompany) && allCompany.length > 0;
 
-  const handleChange = (field: keyof InputType, value: string | number) => {
-    setInput({ type: "SET_FIELD", field, value });
+  const setField = <K extends keyof FormState>(key: K, value: FormState[K]) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
+
+  const addRequirements = (raw: string) => {
+    const items = raw
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    if (items.length === 0) return;
+    setForm((prev) => ({
+      ...prev,
+      requirements: [
+        ...prev.requirements,
+        ...items.filter(
+          (item) =>
+            !prev.requirements.some((r) => r.toLowerCase() === item.toLowerCase())
+        ),
+      ],
+    }));
+    setRequirementInput("");
   };
 
-  const handleSelectChange = (value: string) => {
-    const selectedCompany = allCompany?.find(
-      (company) => company.name.toLowerCase() === value
+  const removeRequirement = (item: string) =>
+    setField(
+      "requirements",
+      form.requirements.filter((r) => r !== item)
     );
-    handleChange("companyId", selectedCompany?._id ?? "");
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (!form.companyId) return toast.error("Please select a company.");
+    if (!form.jobType) return toast.error("Please select a job type.");
+    if (!htmlToText(form.description))
+      return toast.error("Please add a job description.");
+
+    // include a requirement that was typed but not yet added
+    const requirements = [...form.requirements];
+    const pending = requirementInput.trim();
+    if (pending && !requirements.includes(pending)) requirements.push(pending);
+    if (requirements.length === 0)
+      return toast.error("Please add at least one requirement.");
+
     try {
       setLoading(true);
-      const res = await axios.post(`${JOB_API_ENDPOINT}/create-job`, input, {
-        headers: { "Content-Type": "application/json" },
-        withCredentials: true,
-      });
+      const res = await axios.post(
+        `${JOB_API_ENDPOINT}/create-job`,
+        {
+          title: form.title.trim(),
+          companyId: form.companyId,
+          jobType: form.jobType,
+          location: form.location.trim(),
+          experience: Number(form.experience),
+          salary: Number(form.salary),
+          position: Number(form.position),
+          description: form.description,
+          requirements,
+        },
+        {
+          headers: { "Content-Type": "application/json" },
+          withCredentials: true,
+        }
+      );
 
       if (res.data.success) {
         toast.success(res?.data?.message);
         navigate("/admin/ad-jobs");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("ERROR! while submitting the new job: ", error);
-      toast.error(error.response.data.message || "An unknown error occurred!");
+      toast.error(
+        axios.isAxiosError(error)
+          ? error.response?.data?.message || "An unknown error occurred!"
+          : "An unknown error occurred!"
+      );
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-4xl border rounded-2xl shadow my-4 mx-auto p-5">
+    <div className="mx-auto my-6 w-full max-w-4xl px-4">
+      <Button asChild variant="ghost" size="sm" className="mb-3 -ml-2">
+        <Link to="/admin/ad-jobs">
+          <ArrowLeft className="mr-1 size-4" /> Back to jobs
+        </Link>
+      </Button>
+
       <div className="mb-6">
-        <h2 className="text-2xl font-bold  mb-1">Post a New Job</h2>
-        <p className=" text-xs">
-          Fill in the details below to create a new job posting
+        <h1 className="text-2xl font-bold md:text-3xl">Post a New Job</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Create a clear, detailed opening to attract the right candidates.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-2">
-        {/* Job Details Section */}
-        <section className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {/* Job Title */}
-          <div className="space-y-1">
-            <Label
-              htmlFor="title"
-              className="text-sm font-semibold  flex items-center gap-1"
-            >
-              Job Title
-              <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="title"
-              value={input.title}
-              onChange={(e) => handleChange("title", e.target.value)}
-              placeholder="e.g., Frontend Developer"
-              className="focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
+      {!hasCompanies && (
+        <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
+          <span>Register a company before posting a job.</span>
+          <Button asChild size="sm" variant="outline">
+            <Link to="/admin/companies/register-company">Register company</Link>
+          </Button>
+        </div>
+      )}
 
-          {/* Registered Company */}
-          <div className="space-y-1">
-            <Label
-              htmlFor="company"
-              className="text-sm font-semibold  flex items-center gap-1"
-            >
-              Registered Company
-              <span className="text-red-500">*</span>
-            </Label>
-            {Array.isArray(allCompany) && allCompany.length > 0 ? (
-              <Select onValueChange={handleSelectChange}>
-                <SelectTrigger
-                  id="company"
-                  className="w-full focus:ring-2 focus:ring-blue-500"
-                >
-                  <SelectValue placeholder="Select a company" />
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <Section
+          title="Basic information"
+          description="What is the role and who is hiring?"
+        >
+          <div className="grid gap-5 md:grid-cols-2">
+            <Field label="Job Title" htmlFor="title">
+              <Input
+                id="title"
+                value={form.title}
+                onChange={(e) => setField("title", e.target.value)}
+                placeholder="e.g., Senior Frontend Developer"
+                required
+              />
+            </Field>
+
+            <Field label="Company" htmlFor="company">
+              <Select
+                value={form.companyId}
+                onValueChange={(value) => setField("companyId", value)}
+                disabled={!hasCompanies}
+              >
+                <SelectTrigger id="company" className="w-full">
+                  <SelectValue
+                    placeholder={
+                      hasCompanies ? "Select a company" : "No companies yet"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {allCompany.map((company) => (
-                    <SelectItem
-                      key={company._id}
-                      value={company?.name?.toLowerCase()}
-                    >
-                      {company?.name || ""}
+                  {allCompany?.map((company) => (
+                    <SelectItem key={company._id} value={company._id}>
+                      {company.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            ) : (
-              <div className="text-sm  bg-gray-50 p-3 rounded-md border">
-                No companies available
-              </div>
-            )}
-          </div>
+            </Field>
 
-          {/* Job Description */}
-          <div className="space-y-1 md:col-span-2">
-            <Label
-              htmlFor="description"
-              className="text-sm font-semibold  flex items-center gap-1"
+            <Field label="Job Type" htmlFor="jobType">
+              <Select
+                value={form.jobType}
+                onValueChange={(value) => setField("jobType", value)}
+              >
+                <SelectTrigger id="jobType" className="w-full">
+                  <SelectValue placeholder="Select job type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {JOB_TYPES.map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {type}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </Field>
+
+            <Field label="Location" htmlFor="location">
+              <Input
+                id="location"
+                value={form.location}
+                onChange={(e) => setField("location", e.target.value)}
+                placeholder="e.g., Bangalore or Remote"
+                required
+              />
+            </Field>
+          </div>
+        </Section>
+
+        <Section
+          title="Compensation & openings"
+          description="Set the expected experience, pay and number of vacancies."
+        >
+          <div className="grid gap-5 md:grid-cols-3">
+            <Field
+              label="Experience (years)"
+              htmlFor="experience"
+              hint="Use 0 for freshers"
             >
-              Job Description
-              <span className="text-red-500">*</span>
-            </Label>
-            <Textarea
-              id="description"
-              value={input.description}
-              onChange={(e) => handleChange("description", e.target.value)}
-              placeholder="Describe the job responsibilities, expectations, and what makes your company great..."
-              className="h-16 resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
+              <Input
+                id="experience"
+                type="number"
+                min="0"
+                step="1"
+                value={form.experience}
+                onChange={(e) => setField("experience", e.target.value)}
+                placeholder="e.g., 3"
+                required
+              />
+            </Field>
 
-          {/* Requirements */}
-          <div className="space-y-1 md:col-span-2">
-            <Label
-              htmlFor="requirements"
-              className="text-sm font-semibold  flex items-center gap-1"
-            >
-              Requirements
-              <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="requirements"
-              value={input.requirements}
-              onChange={(e) => handleChange("requirements", e.target.value)}
-              placeholder="List job requirements separated by commas (e.g., React, TypeScript, 3+ years experience)"
-              className="focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
-
-          {/* Salary */}
-          <div className="space-y-1">
-            <Label
+            <Field
+              label="Salary (LPA)"
               htmlFor="salary"
-              className="text-sm font-semibold  flex items-center gap-1"
+              hint="Lakhs per annum, e.g. 12 or 8.5"
             >
-              Salary ($)
-              <span className="text-red-500">*</span>
-            </Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 ">
-                $
-              </span>
               <Input
                 id="salary"
                 type="number"
-                value={input.salary}
-                onChange={(e) => handleChange("salary", Number(e.target.value))}
-                placeholder="50000"
-                className="pl-8 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 min="0"
+                step="0.5"
+                value={form.salary}
+                onChange={(e) => setField("salary", e.target.value)}
+                placeholder="e.g., 12"
                 required
               />
-            </div>
-          </div>
+            </Field>
 
-          {/* Location */}
-          <div className="space-y-1">
-            <Label
-              htmlFor="location"
-              className="text-sm font-semibold  flex items-center gap-1"
-            >
-              Location
-              <span className="text-red-500">*</span>
-            </Label>
+            <Field label="Open Positions" htmlFor="position">
+              <Input
+                id="position"
+                type="number"
+                min="1"
+                step="1"
+                value={form.position}
+                onChange={(e) => setField("position", e.target.value)}
+                required
+              />
+            </Field>
+          </div>
+        </Section>
+
+        <Section
+          title="Job description"
+          description="Describe the role, responsibilities and what makes your team great."
+        >
+          <RichTextEditor
+            id="description"
+            value={form.description}
+            onChange={(html) => setField("description", html)}
+            placeholder="Write about the role, key responsibilities, benefits and your team..."
+          />
+        </Section>
+
+        <Section
+          title="Requirements"
+          description="Add skills and qualifications. Press Enter or comma after each one."
+        >
+          <div className="space-y-3">
             <Input
-              id="location"
-              value={input.location}
-              onChange={(e) => handleChange("location", e.target.value)}
-              placeholder="e.g., New York, NY or Remote"
-              className="focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
+              id="requirements"
+              value={requirementInput}
+              onChange={(e) => setRequirementInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") {
+                  e.preventDefault();
+                  addRequirements(requirementInput);
+                }
+              }}
+              onBlur={() => addRequirements(requirementInput)}
+              placeholder="e.g., React, TypeScript, REST APIs"
             />
+            {form.requirements.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {form.requirements.map((item) => (
+                  <Badge key={item} variant="secondary" className="gap-1 pr-1">
+                    {item}
+                    <button
+                      type="button"
+                      aria-label={`Remove ${item}`}
+                      onClick={() => removeRequirement(item)}
+                      className="cursor-pointer rounded-full p-0.5 hover:bg-foreground/10"
+                    >
+                      <X className="size-3" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
           </div>
+        </Section>
 
-          {/* Job Type */}
-          <div className="space-y-1">
-            <Label
-              htmlFor="jobType"
-              className="text-sm font-semibold  flex items-center gap-1"
-            >
-              Job Type
-              <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="jobType"
-              value={input.jobType}
-              onChange={(e) => handleChange("jobType", e.target.value)}
-              placeholder="e.g., Full-time, Part-time, Contract"
-              className="focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
-
-          {/* Experience Level */}
-          <div className="space-y-1">
-            <Label
-              htmlFor="experience"
-              className="text-sm font-semibold  flex items-center gap-1"
-            >
-              Experience Level
-              <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="experience"
-              value={input.experience}
-              onChange={(e) => handleChange("experience", e.target.value)}
-              placeholder="e.g., 3+ years, Entry-level, Senior"
-              className="focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
-
-          {/* Position */}
-          <div className="space-y-1">
-            <Label
-              htmlFor="position"
-              className="text-sm font-semibold  flex items-center gap-1"
-            >
-              Number of Positions
-              <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              id="position"
-              type="number"
-              value={input.position}
-              onChange={(e) => handleChange("position", Number(e.target.value))}
-              placeholder="1"
-              className="focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              min="1"
-              required
-            />
-          </div>
-        </section>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col space-y-4 pt-2">
+        <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button
-            type="submit"
-            disabled={loading || !allCompany || allCompany.length === 0}
+            type="button"
+            variant="outline"
+            onClick={() => navigate("/admin/ad-jobs")}
           >
+            Cancel
+          </Button>
+          <Button type="submit" disabled={loading || !hasCompanies}>
             {loading ? (
               <>
-                <Loader className="h-5 w-5 animate-spin" />
-                Creating Job Post...
+                <Loader className="h-4 w-4 animate-spin" />
+                Publishing...
               </>
             ) : (
-              "Create Job Post"
+              "Publish Job"
             )}
           </Button>
-
-          {(!allCompany || allCompany.length === 0) && (
-            <div className="text-center">
-              <p className="text-red-600 text-sm font-semibold bg-red-50 py-3 px-4 rounded-lg border border-red-200">
-                ⚠️ Please register a company first before posting a job
-              </p>
-            </div>
-          )}
         </div>
       </form>
     </div>

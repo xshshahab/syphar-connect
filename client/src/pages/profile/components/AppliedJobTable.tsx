@@ -92,13 +92,16 @@ export const columns: ColumnDef<AppliedJobState>[] = [
 export function AppliedJobTable() {
   const { allAppliedJobs } = useSelector((state: RootState) => state.job);
 
-  const data: AppliedJobState[] = allAppliedJobs.map((appliedJob) => ({
-    id: appliedJob._id,
-    date: appliedJob.createdAt.split("T")[0],
-    jobRole: appliedJob.job.jobType,
-    companyName: appliedJob.job.company.name,
-    status: appliedJob.status,
-  }));
+  // an application can outlive its job if the job was deleted
+  const data: AppliedJobState[] = allAppliedJobs
+    .filter((appliedJob) => appliedJob.job)
+    .map((appliedJob) => ({
+      id: appliedJob._id,
+      date: appliedJob.createdAt.split("T")[0],
+      jobRole: appliedJob.job.title || appliedJob.job.jobType,
+      companyName: appliedJob.job.company?.name ?? "",
+      status: appliedJob.status,
+    }));
 
   return (
     <div className="w-full p-4">

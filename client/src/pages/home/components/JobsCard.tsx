@@ -1,3 +1,4 @@
+import { htmlToText } from "@/utils/richText";
 import React from "react";
 import {
   Card,
@@ -10,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import type { Job } from "@/redux/types/jobTypes";
 import { useNavigate } from "react-router";
 import { key } from "@/utils/key";
+import SaveJobButton from "@/shared/SaveJobButton";
 
 interface JobsCardProps {
   jobs: Job;
@@ -24,7 +26,8 @@ const JobsCard: React.FC<JobsCardProps> = ({ jobs }) => {
       key={key}
     >
       <div className="flex flex-col flex-1">
-        <CardHeader>
+        <CardHeader className="relative">
+          <SaveJobButton job={jobs} className="absolute right-3 top-0" />
           <CardTitle>
             <h1 className="text-xl font-semibold">
               {jobs.company?.name || ""}
@@ -37,8 +40,8 @@ const JobsCard: React.FC<JobsCardProps> = ({ jobs }) => {
             <h1 className="text-lg text-foreground font-medium">
               {jobs.title || ""}
             </h1>
-            <p className="text-base text-gray-700 dark:text-gray-400 mt-1">
-              {jobs.description || ""}
+            <p className="text-base text-gray-700 dark:text-gray-400 mt-1 line-clamp-3">
+              {htmlToText(jobs.description || "")}
             </p>
           </CardDescription>
         </CardHeader>

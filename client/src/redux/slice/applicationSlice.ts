@@ -64,8 +64,18 @@ export const applicationSlice = createSlice({
     setAllApplicants: (state, action: PayloadAction<Job>) => {
       state.applicants = action.payload;
     },
+    updateApplicationStatus: (
+      state,
+      action: PayloadAction<{ id: string; status: string }>
+    ) => {
+      const application = state.applicants?.applications.find(
+        (item) => item._id === action.payload.id
+      );
+      if (application) application.status = action.payload.status;
+    },
   },
 });
 
-export const { setAllApplicants } = applicationSlice.actions;
+export const { setAllApplicants, updateApplicationStatus } =
+  applicationSlice.actions;
 export const applicationReducer = applicationSlice.reducer;

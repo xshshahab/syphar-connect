@@ -6,8 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 
-import type { RootState } from "@/redux/store";
-
 import { COMPANY_API_ENDPOINT } from "@/utils/constant";
 import axios from "axios";
 import { ArrowLeft, Upload, X } from "lucide-react";
@@ -17,7 +15,6 @@ import React, {
   type ChangeEvent,
   type FormEvent,
 } from "react";
-import { useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router";
 import { toast } from "sonner";
 
@@ -32,7 +29,8 @@ interface CompanyType {
 
 const CompanySetup: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
-  const { allCompany } = useSelector((state: RootState) => state.company);
+  // true while the company is being loaded into the form
+  const [fetching, setFetching] = useState<boolean>(true);
 
   const params = useParams();
   const navigate = useNavigate();
@@ -46,20 +44,41 @@ const CompanySetup: React.FC = () => {
     previewUrl: null,
   });
 
+  // Load this company straight from the server. Reading it from a list kept in
+  // memory left the form empty for a company that was just registered.
   useEffect(() => {
-    allCompany?.map((company) => {
-      if (params.companyId === company._id) {
-        setInput({
-          name: company.name || "",
-          website: company.website || "",
-          description: company.description || "",
-          location: company.location || "",
-          file: company.logo || "",
-          previewUrl: company.logo || "",
-        });
+    const controller = new AbortController();
+
+    (async () => {
+      try {
+        setFetching(true);
+        const res = await axios.get(
+          `${COMPANY_API_ENDPOINT}/company/${params.companyId}`,
+          { withCredentials: true, signal: controller.signal }
+        );
+        if (res.data.success) {
+          const company = res.data.company;
+          setInput({
+            name: company.name || "",
+            website: company.website || "",
+            description: company.description || "",
+            location: company.location || "",
+            file: company.logo || "",
+            previewUrl: company.logo || "",
+          });
+        }
+        setFetching(false);
+      } catch (error) {
+        if (axios.isCancel(error)) return;
+        console.error("ERROR! loading company: ", error);
+        toast.error("Could not load this company.");
+        navigate("/admin/companies", { replace: true });
       }
-    });
-  }, [allCompany]);
+    })();
+
+    return () => controller.abort();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params.companyId]);
 
   const inputChangeEventHandler = (
     e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -132,7 +151,7 @@ const CompanySetup: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen  px-10 py-10">
+    <div className="min-h-screen px-4 py-6 md:px-10 md:py-10">
       {/* Header */}
       <div className="flex items-center  gap-3 mb-8">
         <Button onClick={() => navigate(-1)} variant="outline" size="sm">
@@ -143,9 +162,14 @@ const CompanySetup: React.FC = () => {
 
       {/* Form Section */}
       <section className="max-w-5xl mx-auto">
+        {fetching ? (
+          <div className="flex justify-center py-20">
+            <Spinner className="size-6" />
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Grid layout */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             {/* Left side - Logo upload */}
             <div className="flex flex-col space-y-3">
               <Label>Company Logo</Label>
@@ -191,7 +215,7 @@ const CompanySetup: React.FC = () => {
               <Input
                 id="name"
                 name="name"
-                placeholder="e.g., Syphar Connect LLP"
+                placeholder="e.g., SypharConnect"
                 value={input.name}
                 onChange={inputChangeEventHandler}
               />
@@ -199,7 +223,7 @@ const CompanySetup: React.FC = () => {
           </div>
 
           {/* Website & Location grid */}
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div className="flex flex-col space-y-2">
               <Label htmlFor="website">Website URL</Label>
               <Input
@@ -248,6 +272,7 @@ const CompanySetup: React.FC = () => {
             </Button>
           </div>
         </form>
+        )}
       </section>
     </div>
   );

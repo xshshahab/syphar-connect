@@ -1,66 +1,103 @@
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { ChevronDown, SlidersHorizontal } from "lucide-react";
+import { useDispatch, useSelector } from "react-redux";
 import { Card } from "@/components/ui/card";
-import { useDispatch } from "react-redux";
-import { setSearchQuery } from "@/redux/slice/jobSlice";
-
-const filterData = [
-  {
-    filterType: "Location",
-    array: ["Delhi NCR", "Mumbai", "Banglore", "Hyderabad", "Pune"],
-  },
-  {
-    filterType: "Industry",
-    array: [
-      "Frontend Developer",
-      "Backend Developer",
-      "FullStack Developer",
-      "Data Science",
-    ],
-  },
-  {
-    filterType: "Salary",
-    array: ["0-40K", "42K-1lakh", "1lakh to 5lakh", "5lakh to 25Lakh"],
-  },
-];
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
+import { clearFilters, toggleFilter } from "@/redux/slice/jobSlice";
+import type { RootState } from "@/redux/store";
+import {
+  FILTER_GROUPS,
+  countActiveFilters,
+  emptyFilters,
+} from "@/utils/jobFilters";
 
 const FilterPage: React.FC = () => {
-  const [selectedValue, setSelectedValue] = useState<string>("");
   const dispatch = useDispatch();
+  const filters =
+    useSelector((state: RootState) => state.job.filters) ?? emptyFilters;
+  // collapsed by default on small screens, always open on desktop
+  const [open, setOpen] = useState<boolean>(false);
 
-  const changeHandlerFn = (value: string) => {
-    setSelectedValue(value);
-  };
-
-  useEffect(() => {
-    dispatch(setSearchQuery(selectedValue));
-  }, [selectedValue]);
+  const active = countActiveFilters(filters);
 
   return (
-    <Card className="w-full p-4 border rounded-xl">
-      <h2 className="text-xl font-bold mb-4">Filter Jobs</h2>
-      <div className="space-y-6">
-        {filterData.map((data, index) => (
-          <div key={index} className="space-y-3">
-            <h3 className="font-semibold dark:text-gray-200 text-gray-800">
-              {data.filterType}
-            </h3>
+    <Card className="gap-0 p-0">
+      <div className="flex items-center justify-between gap-2 p-4">
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+          className="flex cursor-pointer items-center gap-2 text-left lg:pointer-events-none"
+        >
+          <SlidersHorizontal className="size-4" />
+          <h2 className="text-base font-semibold">Filters</h2>
+          {active > 0 && (
+            <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white">
+              {active}
+            </span>
+          )}
+          <ChevronDown
+            className={cn(
+              "size-4 transition-transform lg:hidden",
+              open && "rotate-180"
+            )}
+          />
+        </button>
+        {active > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="cursor-pointer text-muted-foreground"
+            onClick={() => dispatch(clearFilters())}
+          >
+            Clear all
+          </Button>
+        )}
+      </div>
 
-            <RadioGroup value={selectedValue} onValueChange={changeHandlerFn}>
-              {data.array.map((option, idx) => {
-                const id = `${data.filterType}-${idx}`;
+      <div
+        className={cn(
+          "space-y-6 border-t p-4",
+          open ? "block" : "hidden",
+          "lg:block"
+        )}
+      >
+        {FILTER_GROUPS.map((group) => (
+          <fieldset key={group.key} className="space-y-3">
+            <legend className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {group.label}
+            </legend>
+            <div className="space-y-2.5">
+              {group.options.map((option) => {
+                const id = `filter-${group.key}-${option.value}`;
                 return (
-                  <div key={id} className="flex items-center space-x-2">
-                    <RadioGroupItem value={option} id={id} />
-                    <Label htmlFor={id} className="text-sm">
-                      {option}
+                  <div key={option.value} className="flex items-center gap-2.5">
+                    <Checkbox
+                      id={id}
+                      checked={filters[group.key].includes(option.value)}
+                      onCheckedChange={() =>
+                        dispatch(
+                          toggleFilter({
+                            group: group.key,
+                            value: option.value,
+                          })
+                        )
+                      }
+                    />
+                    <Label
+                      htmlFor={id}
+                      className="flex-1 cursor-pointer text-sm font-normal"
+                    >
+                      {option.label}
                     </Label>
                   </div>
                 );
               })}
-            </RadioGroup>
-          </div>
+            </div>
+          </fieldset>
         ))}
       </div>
     </Card>

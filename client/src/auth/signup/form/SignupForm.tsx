@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Link, useNavigate } from "react-router";
 import { useState } from "react";
-import { Eye, EyeOff, Loader, Upload } from "lucide-react";
+import { Eye, EyeOff, Loader } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import axios from "axios";
 import { USER_API_ENDPOINT } from "@/utils/constant";
@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import type { AppDispatch, RootState } from "@/redux/store";
 import { setLoading } from "@/redux/slice/authSlice";
+import ProfilePhotoInput from "@/shared/ProfilePhotoInput";
 
 export function SignupForm({
   className,
@@ -23,7 +24,7 @@ export function SignupForm({
   const [phoneNumber, setPhoneNumber] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [role, setRole] = useState<string>("student");
-  const [fileName, setFileName] = useState<string>("");
+  const [profilePhoto, setProfilePhoto] = useState<File | null>(null);
 
   const navigate = useNavigate();
 
@@ -42,11 +43,8 @@ export function SignupForm({
       formData.append("password", password);
       formData.append("role", role);
 
-      const fileInput = document.getElementById(
-        "profileImage"
-      ) as HTMLInputElement;
-      if (fileInput?.files?.[0]) {
-        formData.append("file", fileInput.files[0]);
+      if (profilePhoto) {
+        formData.append("file", profilePhoto);
       }
 
       const res = await axios.post(`${USER_API_ENDPOINT}/register`, formData, {
@@ -70,11 +68,6 @@ export function SignupForm({
     } finally {
       dispatch(setLoading(false));
     }
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) setFileName(file.name);
   };
 
   return (
@@ -181,23 +174,12 @@ export function SignupForm({
 
           {/* Profile Image Upload */}
           <div className="grid gap-3">
-            <Label htmlFor="profileImage">Profile Image</Label>
-            <label
-              htmlFor="profileImage"
-              className="flex items-center gap-2 px-2 border border-gray-300 rounded-md cursor-pointer transition-colors"
-            >
-              <Upload className="w-5 h-5 text-gray-500" />
-              <span className="text-gray-700 text-sm truncate">
-                {fileName || "Choose a file"}
-              </span>
-              <Input
-                id="profileImage"
-                type="file"
-                accept="image/*"
-                onChange={handleFileChange}
-                className="w-full h-full opacity-0 cursor-pointer"
-              />
-            </label>
+            <Label>Profile Image</Label>
+            <ProfilePhotoInput
+              value={profilePhoto}
+              onChange={setProfilePhoto}
+              fallback={fullName.charAt(0).toUpperCase() || "U"}
+            />
           </div>
         </div>
 

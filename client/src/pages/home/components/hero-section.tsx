@@ -5,8 +5,6 @@ import { TextEffect } from "@/components/ui/text-effect";
 import { AnimatedGroup } from "@/components/ui/animated-group";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { useDispatch } from "react-redux";
-import { setSearchQuery } from "@/redux/slice/jobSlice";
 
 const transitionVariants: any = {
   item: {
@@ -29,13 +27,12 @@ const transitionVariants: any = {
 };
 
 export default function HeroSection() {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
   const [query, setQuery] = useState<string>("");
 
   const searchQueryHandler = () => {
-    dispatch(setSearchQuery(query));
-    navigate("/browse");
+    const keyword = query.trim();
+    navigate(keyword ? `/search?keyword=${encodeURIComponent(keyword)}` : "/search");
   };
 
   return (
@@ -153,12 +150,12 @@ export default function HeroSection() {
                 >
                   <div
                     key={1}
-                    className="bg-foreground/10 flex rounded-[calc(var(--radius-xl)+0.125rem)] border p-0.5"
+                    className="bg-foreground/10 flex w-full max-w-md rounded-[calc(var(--radius-xl)+0.125rem)] border p-0.5 md:w-auto md:max-w-none"
                   >
                     <Input
                       value={query}
                       onChange={(e) => setQuery(e.target.value)}
-                      className="w-96 mt-0.5 border-none outline-none ring-0 focus:border-none focus:outline-none focus:ring-0 focus-visible:ring-0 shadow-none"
+                      className="min-w-0 flex-1 md:w-96 md:flex-none mt-0.5 border-none outline-none ring-0 focus:border-none focus:outline-none focus:ring-0 focus-visible:ring-0 shadow-none"
                       placeholder="Find your dream jobs"
                       type="text"
                     />

@@ -1,3 +1,4 @@
+import { htmlToText } from "@/utils/richText";
 import React, { useEffect, useState } from "react";
 import JobsCard from "./JobsCard";
 import { useSelector } from "react-redux";
@@ -17,7 +18,7 @@ const LatestJobs: React.FC = () => {
 
     if (query) {
       const filteredJobs = allJobs.filter((job) =>
-        [job.title, job.description, job.location]
+        [job.title, htmlToText(job.description), job.location]
           .map((f) => f.toLowerCase())
           .some((f) => f.includes(query))
       );
@@ -28,7 +29,7 @@ const LatestJobs: React.FC = () => {
   }, [allJobs, searchQuery]);
 
   return (
-    <div className="py-14">
+    <div className="px-4 py-14">
       <h1
         className="text-2xl mb-5 font-semibold 
     bg-gradient-to-r from-black via-gray-400 to-gray-600 
@@ -58,7 +59,7 @@ const LatestJobs: React.FC = () => {
       {filterJobs.length > 6 && (
         <div className="flex justify-center mt-8">
           <Button className="rounded-full">
-            <Link to={"/browse"}>Explore Jobs</Link>
+            <Link to={"/jobs"}>Explore Jobs</Link>
           </Button>
         </div>
       )}

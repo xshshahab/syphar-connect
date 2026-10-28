@@ -42,6 +42,8 @@ interface DynamicTableProps<TData> {
   columns: ColumnDef<TData, any>[];
   filterColumn?: string;
   tableCaption?: string;
+  // makes every row clickable; interactive cells should stop propagation
+  onRowClick?: (row: TData) => void;
 }
 
 export function DynamicTable<TData>({
@@ -49,6 +51,7 @@ export function DynamicTable<TData>({
   columns,
   filterColumn,
   tableCaption,
+  onRowClick,
 }: DynamicTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -79,7 +82,7 @@ export function DynamicTable<TData>({
 
   return (
     <div className="w-full">
-      <div className="flex items-center py-4">
+      <div className="flex flex-wrap items-center gap-2 py-4">
         {filterColumn && (
           <>
             <InputGroup className="max-w-sm">
@@ -150,6 +153,8 @@ export function DynamicTable<TData>({
                 <TableRow
                   key={row.id}
                   data-state={row.getIsSelected() && "selected"}
+                  onClick={onRowClick ? () => onRowClick(row.original) : undefined}
+                  className={onRowClick ? "cursor-pointer" : undefined}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
