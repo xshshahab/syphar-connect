@@ -1,5 +1,6 @@
 import { Application } from "../models/application.model.js";
 import { Job } from "../models/job.model.js";
+import { User } from "../models/user.model.js";
 
 export const applyJob = async (req, res) => {
   try {
@@ -29,6 +30,22 @@ export const applyJob = async (req, res) => {
     if (!job) {
       return res.status(404).json({
         message: "Job not found!",
+        success: false,
+      });
+    }
+
+    // recruiters cannot apply, and a student must have a resume on file
+    const applicant = await User.findById(userId).select("role profile.resume");
+    if (!applicant || applicant.role !== "student") {
+      return res.status(403).json({
+        message: "Only job seekers can apply for jobs",
+        success: false,
+      });
+    }
+    if (!applicant.profile?.resume) {
+      return res.status(400).json({
+        message: "Please upload your resume before applying",
+        needsResume: true,
         success: false,
       });
     }
@@ -78,7 +95,7 @@ export const getAppliedJobs = async (req, res) => {
     return res.status(200).json({
       message: "Application retreived successfully",
       application,
-      success: false,
+      success: true,
     });
   } catch (error) {
     console.error("ERROR! get applied job controller: ", error);
@@ -97,12 +114,21 @@ export const getApplicants = async (req, res) => {
       options: { sort: { createdAt: -1 } },
       populate: {
         path: "applicant",
+        select: "-password",
       },
     });
 
     if (!job) {
       return res.status(404).json({
         message: "Job not found",
+        success: false,
+      });
+    }
+
+    // only the recruiter who posted the job may see its applicants
+    if (String(job.created_by) !== req.id) {
+      return res.status(403).json({
+        message: "Not allowed to view applicants of this job",
         success: false,
       });
     }
@@ -133,7 +159,17 @@ export const updateStatus = async (req, res) => {
       });
     }
 
-    const application = await Application.findOne({ _id: applicationId });
+    const newStatus = String(status).toUpperCase();
+    if (!["PENDING", "ACCEPTED", "REJECTED"].includes(newStatus)) {
+      return res.status(400).json({
+        message: "Invalid status",
+        success: false,
+      });
+    }
+
+    const application = await Application.findOne({
+      _id: applicationId,
+    }).populate({ path: "job", select: "created_by" });
     if (!application) {
       return res.status(400).json({
         message: "Application not found",
@@ -141,7 +177,15 @@ export const updateStatus = async (req, res) => {
       });
     }
 
-    application.status = status.toUpperCase();
+    // only the recruiter who posted the job may change its applications
+    if (String(application.job?.created_by) !== req.id) {
+      return res.status(403).json({
+        message: "Not allowed to update this application",
+        success: false,
+      });
+    }
+
+    application.status = newStatus;
     await application.save();
 
     return res.status(200).json({

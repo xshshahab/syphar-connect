@@ -1,15 +1,12 @@
 import { User } from "../models/user.model.js";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-import { getDataURI } from "../utils/dataURI.js";
-import cloudinary from "../utils/cloudinary.js";
+import { getFileURL, removeUploadedFile } from "../utils/uploads.js";
 
 export const register = async (req, res) => {
   try {
     const { fullName, email, phoneNumber, password, role } = req.body;
     const file = req.file;
-    const fileURI = getDataURI(file);
-    const cloudResponse = await cloudinary.uploader.upload(fileURI.content);
 
     if (
       !fullName?.trim() ||
@@ -18,6 +15,7 @@ export const register = async (req, res) => {
       !password?.trim() ||
       !role?.trim()
     ) {
+      removeUploadedFile(file);
       return res.status(400).json({
         message: "Missing: Required fields",
         success: false,
@@ -26,6 +24,7 @@ export const register = async (req, res) => {
 
     const user = await User.findOne({ email });
     if (user) {
+      removeUploadedFile(file);
       return res.status(400).json({
         message: "User already exist",
         success: false,
@@ -40,7 +39,7 @@ export const register = async (req, res) => {
       phoneNumber,
       role,
       profile: {
-        profilePhoto: cloudResponse.secure_url,
+        profilePhoto: file ? getFileURL(req, file) : undefined,
       },
     });
 
@@ -55,8 +54,9 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password, role } = req.body;
-    if (!email?.trim() || !password?.trim() || !role?.trim()) {
+    // the role is stored on the account at signup, so login does not ask for it
+    const { email, password } = req.body;
+    if (!email?.trim() || !password?.trim()) {
       return res.status(400).json({
         message: "Missing: Required fields",
         success: false,
@@ -75,13 +75,6 @@ export const login = async (req, res) => {
     if (!isPasswordMatched) {
       return res.status(400).json({
         message: "Incorect email or password.",
-        success: false,
-      });
-    }
-
-    if (role !== user.role) {
-      return res.status(400).json({
-        message: "Account doesn't exist with current role.",
         success: false,
       });
     }
@@ -107,7 +100,7 @@ export const login = async (req, res) => {
       .status(200)
       .cookie("token", token, {
         maxAge: 1 * 24 * 60 * 60 * 1000,
-        httpsOnly: true,
+        httpOnly: true,
         sameSite: "strict",
       })
       .json({
@@ -135,9 +128,12 @@ export const updateProfile = async (req, res) => {
   try {
     const { fullName, email, phoneNumber, bio, skills } = req.body;
 
-    const file = req.file;
-    const fileURI = getDataURI(file);
-    const cloudResponse = await cloudinary.uploader.upload(fileURI.content);
+    const resumeFile = req.files?.file?.[0];
+    const photoFile = req.files?.profilePhoto?.[0];
+    const discardUploads = () => {
+      removeUploadedFile(resumeFile);
+      removeUploadedFile(photoFile);
+    };
 
     const { id } = req.params;
 
@@ -148,8 +144,17 @@ export const updateProfile = async (req, res) => {
         : skills.split(",").map((s) => s.trim());
     }
 
+    // users may only edit their own profile
+    if (id !== req.id) {
+      discardUploads();
+      return res
+        .status(403)
+        .json({ message: "Not allowed to edit this profile", success: false });
+    }
+
     let user = await User.findById(id);
     if (!user) {
+      discardUploads();
       return res
         .status(404)
         .json({ message: "User not found!", success: false });
@@ -164,16 +169,26 @@ export const updateProfile = async (req, res) => {
 
     if (bio) user.profile.bio = bio;
     if (skillsArray) user.profile.skills = skillsArray;
-    if (cloudResponse) {
-      user.profile.resume = cloudResponse.secure_url;
-      user.profile.resumeOriginalName = file.originalname;
+    if (resumeFile) {
+      user.profile.resume = getFileURL(req, resumeFile);
+      user.profile.resumeOriginalName = resumeFile.originalname;
+    }
+    if (photoFile) {
+      user.profile.profilePhoto = getFileURL(req, photoFile);
     }
 
     await user.save();
 
     return res.status(200).json({
       message: "Profile updated successfully",
-      user,
+      user: {
+        _id: user._id,
+        fullName: user.fullName,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        role: user.role,
+        profile: user.profile,
+      },
       success: true,
     });
   } catch (error) {

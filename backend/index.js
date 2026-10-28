@@ -7,6 +7,7 @@ import userRoute from "./src/routes/user.route.js";
 import companyRoute from "./src/routes/company.route.js";
 import jobRoute from "./src/routes/job.route.js";
 import applicationRoute from "./src/routes/application.route.js";
+import { UPLOAD_DIR } from "./src/config/config.js";
 
 dotenv.config({});
 
@@ -27,6 +28,9 @@ const corsOptions = {
   credentials: true,
 };
 app.use(cors(corsOptions));
+
+// Uploaded files (profile photos, logos, resumes)
+app.use("/uploads", express.static(UPLOAD_DIR));
 
 //  Api's Routes
 app.use("/api/auth/user", userRoute);

@@ -1,6 +1,5 @@
 import { Company } from "../models/company.model.js";
-import cloudinary from "../utils/cloudinary.js";
-import { getDataURI } from "../utils/dataURI.js";
+import { getFileURL, removeUploadedFile } from "../utils/uploads.js";
 
 export const registerCompany = async (req, res) => {
   try {
@@ -107,6 +106,14 @@ export const getCompanyById = async (req, res) => {
       });
     }
 
+    // only the recruiter who registered the company may open it
+    if (String(company.userId) !== req.id) {
+      return res.status(403).json({
+        message: "Not allowed to access this company",
+        success: false,
+      });
+    }
+
     return res.status(200).json({
       message: `Company found by id: ${companyId}`,
       company,
@@ -126,17 +133,19 @@ export const updateCompany = async (req, res) => {
     const { name, description, website, location } = req.body;
 
     const file = req.file;
-    const fileURI = getDataURI(file);
-    const cloudResponse = await cloudinary.uploader.upload(fileURI.content);
-    const logo = cloudResponse.secure_url;
 
-    const updateData = { name, description, website, location, logo };
+    const updateData = { name, description, website, location };
+    if (file) updateData.logo = getFileURL(req, file);
 
-    const company = await Company.findByIdAndUpdate(req.params.id, updateData, {
-      new: true,
-    });
+    // matching on userId means only the owner can change a company
+    const company = await Company.findOneAndUpdate(
+      { _id: req.params.id, userId: req.id },
+      updateData,
+      { new: true }
+    );
 
     if (!company) {
+      removeUploadedFile(file);
       return res.status(404).json({
         message: "Company not found!",
         success: false,
@@ -157,7 +166,7 @@ export const deleteCompany = async (req, res) => {
     const companyId = req.params.id;
 
     // Check if company exists
-    const company = await Company.findById(companyId);
+    const company = await Company.findOne({ _id: companyId, userId: req.id });
     if (!company) {
       return res.status(404).json({
         message: "Company not found!",

@@ -7,7 +7,7 @@ import {
   updateProfile,
 } from "../controllers/user.controller.js";
 import { isAuthenticated } from "../middlewares/isAuthenticated.js";
-import { singleUpload } from "../middlewares/multer.js";
+import { profileUpload, singleUpload } from "../middlewares/multer.js";
 
 const router = express.Router();
 
@@ -16,7 +16,7 @@ router.route("/login").post(login);
 router.route("/logout").get(logout);
 router
   .route("/profile/update-profile/:id")
-  .put(isAuthenticated, singleUpload, updateProfile);
+  .put(isAuthenticated, profileUpload, updateProfile);
 
 router.get("/fetch-all-users", isAuthenticated, getAllUsers);
 export default router;

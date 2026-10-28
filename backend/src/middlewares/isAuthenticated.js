@@ -21,6 +21,10 @@ export const isAuthenticated = async (req, res, next) => {
     req.id = decode.userId;
     next();
   } catch (error) {
-    console.error("ERROR! isAuthenticated middleware: ", error);
+    // invalid or expired token
+    return res.status(401).json({
+      message: "Session expired. Please log in again.",
+      success: false,
+    });
   }
 };

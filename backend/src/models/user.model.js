@@ -24,6 +24,8 @@ const userSchema = new mongoose.Schema(
       enum: ["student", "recruiter"],
       required: true,
     },
+    // jobs a student bookmarked with "Save for later"
+    savedJobs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Job" }],
     profile: {
       bio: {
         type: String,
