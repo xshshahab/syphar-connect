@@ -240,6 +240,13 @@ curl -s http://127.0.0.1:8080/api/job/all-job
 
 You should also see `MONGO DB connected successfully!` in the logs. If you see a connection error instead, recheck `MONGO_URI` and the Atlas IP allow-list.
 
+There is also a health check that reports the database state. It must say `"db":"connected"` before you move on:
+
+```bash
+curl -s http://127.0.0.1:8080/api/health
+# {"api":"ok","db":"connected"}
+```
+
 ---
 
 ## 8. Build the client
@@ -424,6 +431,7 @@ Copy `/var/backups/syphar` to another machine or storage bucket now and then; ba
 | --- | --- |
 | Certbot: `NXDOMAIN looking up A for jobs.shahabuddin.in` | The DNS record does not exist yet (step 3). Add the `A` record, wait until `dig +short jobs.shahabuddin.in` prints your VPS IP, then run certbot again. |
 | The page loads but nothing works (login, jobs) and the browser console shows requests to `localhost:8080` | The client was built from old code. Pull the latest code and rebuild with `/var/www/syphar-connect/deploy.sh`. Check with `grep -c localhost:8080 /var/www/syphar-connect/client/dist/assets/index-*.js`, which must print `0`. |
+| **504 Gateway Time-out** on signup/login, or "Server error while ..." | The API is running but cannot do its work, almost always because **MongoDB is not connected**. Run `curl -s https://jobs.shahabuddin.in/api/health`: `{"api":"ok","db":"connected"}` is healthy; `"db":"disconnected"` means a wrong `MONGO_URI`, a wrong password, Atlas not allowing your VPS IP, or local MongoDB not running (`sudo systemctl status mongod`). The real reason is in `pm2 logs syphar-api --lines 40 --nostream`. |
 | **502 Bad Gateway** | The API is not running. `pm2 status`, then `pm2 logs syphar-api`. |
 | Site loads but every action fails | The browser can't reach `/api`. Run `curl -i https://jobs.shahabuddin.in/api/job/all-job`; you should get `401` JSON. A `404` or HTML page means the `location /api/` block is missing or not loaded (`sudo nginx -t`). |
 | Can't log in / sent back to login | The login cookie only works on HTTPS in production. Use `https://`, and confirm `NODE_ENV=production` together with a valid certificate. |

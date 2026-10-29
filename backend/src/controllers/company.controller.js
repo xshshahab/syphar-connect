@@ -158,6 +158,11 @@ export const updateCompany = async (req, res) => {
     });
   } catch (error) {
     console.error("ERROR! Update company: ", error);
+    removeUploadedFile(req.file);
+    return res.status(500).json({
+      message: "Server error while updating the company",
+      success: false,
+    });
   }
 };
 

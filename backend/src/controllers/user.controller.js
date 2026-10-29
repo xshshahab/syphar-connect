@@ -49,6 +49,11 @@ export const register = async (req, res) => {
     });
   } catch (error) {
     console.error("ERROR! register controller: ", error);
+    removeUploadedFile(req.file);
+    return res.status(500).json({
+      message: "Server error while creating the account",
+      success: false,
+    });
   }
 };
 
@@ -112,6 +117,10 @@ export const login = async (req, res) => {
       });
   } catch (error) {
     console.error("ERROR! login controller: ", error);
+    return res.status(500).json({
+      message: "Server error while logging in",
+      success: false,
+    });
   }
 };
 
@@ -123,6 +132,10 @@ export const logout = async (req, res) => {
     });
   } catch (error) {
     console.error(`ERROR! logout controller: ${error}`);
+    return res.status(500).json({
+      message: "Server error while logging out",
+      success: false,
+    });
   }
 };
 
