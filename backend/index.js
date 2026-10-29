@@ -12,6 +12,9 @@ import { UPLOAD_DIR } from "./src/config/config.js";
 dotenv.config({});
 
 const app = express();
+
+// Behind nginx: trust X-Forwarded-* so req.protocol is https in production
+app.set("trust proxy", 1);
 const PORT = process.env.PORT || 9090;
 
 // middlewares
@@ -23,8 +26,10 @@ app.use(
   })
 );
 
+// Only needed when the client is served from a different origin than the API
+// (always the case in development). Set CLIENT_URL to that origin.
 const corsOptions = {
-  origin: "http://localhost:5173",
+  origin: process.env.CLIENT_URL || "http://localhost:5173",
   credentials: true,
 };
 app.use(cors(corsOptions));
