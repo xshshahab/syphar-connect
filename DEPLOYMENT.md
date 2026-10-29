@@ -165,7 +165,7 @@ Choose **one** option.
      authorization: enabled
    ```
 
-   > **Each top-level key may appear only once.** Adding a second `net:` or `security:` block (or using tabs instead of spaces) makes `mongod` refuse to start. Then restart and check:
+   > **Spell it exactly: `authorization`** (with the **h**). One wrong letter, a second `net:` or `security:` block, or tabs instead of spaces make `mongod` refuse to start. Verify with `grep -n -A1 '^security' /etc/mongod.conf`. Then restart and check:
    >
    > ```bash
    > sudo systemctl restart mongod && systemctl is-active mongod   # active
@@ -453,7 +453,7 @@ Copy `/var/backups/syphar` to another machine or storage bucket now and then; ba
 | --- | --- |
 | Certbot: `NXDOMAIN looking up A for jobs.shahabuddin.in` | The DNS record does not exist yet (step 3). Add the `A` record, wait until `dig +short jobs.shahabuddin.in` prints your VPS IP, then run certbot again. |
 | The page loads but nothing works (login, jobs) and the browser console shows requests to `localhost:8080` | The client was built from old code. Pull the latest code and rebuild with `/var/www/syphar-connect/deploy.sh`. Check with `grep -c localhost:8080 /var/www/syphar-connect/client/dist/assets/index-*.js`, which must print `0`. |
-| `systemctl is-active mongod` prints **`failed`** | MongoDB crashed on start. Read why: `sudo journalctl -u mongod -n 30 --no-pager` and `sudo tail -n 20 /var/log/mongodb/mongod.log`. Common causes: an invalid `/etc/mongod.conf` (a duplicated `net:` or `security:` block, or tabs; fix the file and `sudo systemctl restart mongod`), wrong ownership after running `mongod` by hand (`sudo chown -R mongodb:mongodb /var/lib/mongodb /var/log/mongodb && sudo rm -f /tmp/mongodb-27017.sock`), or a CPU without AVX support (log says `Illegal instruction`): use MongoDB Atlas instead. |
+| `systemctl is-active mongod` prints **`failed`** | MongoDB crashed on start. Read why: `sudo journalctl -u mongod -n 30 --no-pager` and `sudo tail -n 20 /var/log/mongodb/mongod.log`. Common causes: an invalid `/etc/mongod.conf`. The log line says exactly which setting it rejected, for example `Unrecognized option: security.autorization` (a typo for `authorization`), or a duplicated `net:` / `security:` block, or tabs; fix the file and `sudo systemctl restart mongod`. Another cause is wrong ownership after running `mongod` by hand (`sudo chown -R mongodb:mongodb /var/lib/mongodb /var/log/mongodb && sudo rm -f /tmp/mongodb-27017.sock`), or a CPU without AVX support (log says `Illegal instruction`): use MongoDB Atlas instead. |
 | Login/signup fail and the logs show `Server selection timed out` or `Password contains unescaped characters` | MongoDB isn't running, or the password in `MONGO_URI` has an unencoded special character such as `@`. Encode it (section 5, Option B, step 5). |
 | **504 Gateway Time-out** on signup/login, or "Server error while ..." | The API is running but cannot do its work, almost always because **MongoDB is not connected**. Run `curl -s https://jobs.shahabuddin.in/api/health`: `{"api":"ok","db":"connected"}` is healthy; `"db":"disconnected"` means a wrong `MONGO_URI`, a wrong password, Atlas not allowing your VPS IP, or local MongoDB not running (`sudo systemctl status mongod`). The real reason is in `pm2 logs syphar-api --lines 40 --nostream`. |
 | **502 Bad Gateway** | The API is not running. `pm2 status`, then `pm2 logs syphar-api`. |
