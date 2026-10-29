@@ -160,7 +160,7 @@ npm run dev
 
 Open <http://localhost:5173>.
 
-> The backend only accepts requests from `http://localhost:5173` (see `corsOptions` in `backend/index.js`), and the client calls the API at `http://localhost:8080` (see `client/src/utils/constant.ts`). If you change a port or host, update both.
+> In development the client calls the API at `http://localhost:8080` and the backend allows `http://localhost:5173`. Override them with `VITE_API_URL` (client, build time) and `CLIENT_URL` (backend) if you use other addresses.
 
 ## Environment variables
 
@@ -172,7 +172,9 @@ Set these in `backend/.env`:
 | `SECRET_KEY` | Secret used to sign JWTs. Use a long random value. |
 | `PORT` | API port (default `8080`; the client expects `8080`). |
 | `UPLOAD_DIR` | Folder for uploaded files: an absolute path, or relative to `backend/`. Use `../uploads` in development and a persistent path in production, e.g. `/var/data/syphar-uploads`. |
-| `BASE_URL` | Optional. Public URL of the API, used in links to uploaded files. Defaults to the request host. |
+| `BASE_URL` | Optional. Public URL of the API, used in links to uploaded files. Defaults to the request host. Set it in production, e.g. `https://jobs.shahabuddin.in`. |
+| `NODE_ENV` | Set to `production` on a live server so the login cookie is HTTPS-only. |
+| `CLIENT_URL` | Optional. Browser origin allowed by CORS when the client is on a different address than the API (default `http://localhost:5173`). |
 
 ## Available scripts
 
@@ -242,15 +244,16 @@ Profile photos, company logos and resumes are saved to the folder set in `UPLOAD
 
 ## Deployment
 
-- **Client:** deploy `client/` to any static host (for example Vercel). Build command `npm run build`, output directory `dist`. Add a rewrite to `index.html` so React Router deep links work, and point the API address in `client/src/utils/constant.ts` at your backend.
-- **Backend:** needs Node.js and MongoDB. Uploaded files are stored on disk, so host the API somewhere with a persistent disk (a VPS, or Render/Railway with a volume) and set `UPLOAD_DIR` to that location. Serverless hosts such as Vercel cannot keep these files.
-- Set `MONGO_URI`, `SECRET_KEY`, `UPLOAD_DIR` and `BASE_URL` in the host's environment, and update the allowed origin in `backend/index.js` to your client's URL. For a client and API on different domains, the login cookie also needs `SameSite=None; Secure`.
+The recommended setup is a single VPS with Nginx serving the built client and proxying `/api` and `/uploads` to the Node backend, on one domain (for example `jobs.shahabuddin.in`). That keeps cookies simple and needs no CORS.
+
+**Step-by-step guide: [DEPLOYMENT.md](DEPLOYMENT.md)** covers DNS for a subdomain, Node, MongoDB, PM2, Nginx, free HTTPS, updates, backups and troubleshooting.
+
+Uploaded files are stored on disk, so the backend needs a host with a persistent disk (a VPS, or Render/Railway with a volume). Serverless hosts such as Vercel cannot keep those files.
 
 ## Known limitations
 
 - The Contact form shows a thank-you message but does not send the message anywhere yet.
 - The Privacy Policy and Terms of Service are general template text; have them reviewed before launch.
-- API addresses and the CORS origin are hardcoded for local development.
 - There is no automated test suite yet.
 
 ## Author
