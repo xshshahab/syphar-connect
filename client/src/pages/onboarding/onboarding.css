@@ -1,0 +1,195 @@
+/* Onboarding: floating cards, particles and their motion.
+   Card sizes use em, and the font size follows the viewport width, so the
+   whole composition scales like one picture from laptop to 4K. */
+
+@keyframes oc-in {
+  from {
+    opacity: 0;
+    transform: translateY(18px) perspective(1100px) rotateY(var(--ry, 0deg))
+      rotate(var(--r, 0deg)) scale(0.95);
+  }
+  to {
+    opacity: var(--o, 1);
+    transform: translateY(0) perspective(1100px) rotateY(var(--ry, 0deg))
+      rotate(var(--r, 0deg)) scale(1);
+  }
+}
+
+@keyframes oc-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.7em);
+  }
+}
+
+@keyframes oc-twinkle {
+  0%,
+  100% {
+    opacity: 0.12;
+    transform: scale(0.8);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.25);
+  }
+}
+
+.oc-card {
+  position: absolute;
+  font-size: clamp(9.5px, 0.78vw, 16px);
+  line-height: 1.25;
+  color: #18181b;
+  padding: 0.95em 1.05em;
+  border-radius: 1.15em;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: linear-gradient(
+    150deg,
+    rgba(255, 255, 255, 0.97),
+    rgba(250, 245, 245, 0.97)
+  );
+  box-shadow: 0 1.2em 2.6em -1em rgba(70, 20, 28, 0.3);
+  opacity: var(--o, 1);
+  transform: perspective(1100px) rotateY(var(--ry, 0deg)) rotate(var(--r, 0deg));
+  animation: oc-in 0.85s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  animation-delay: var(--d, 0s);
+}
+
+.dark .oc-card {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.1);
+  background: linear-gradient(
+    150deg,
+    rgba(36, 28, 31, 0.94),
+    rgba(21, 18, 19, 0.94)
+  );
+  box-shadow: 0 1.2em 2.6em -1em rgba(0, 0, 0, 0.85);
+}
+
+.oc-card[data-glow] {
+  border-color: rgba(255, 48, 59, 0.5);
+  box-shadow:
+    0 0 0 1px rgba(255, 48, 59, 0.1),
+    0 0 2.2em -0.4em rgba(255, 35, 50, 0.32),
+    0 1.2em 2.6em -1em rgba(70, 20, 28, 0.3);
+}
+
+.dark .oc-card[data-glow] {
+  border-color: rgba(255, 48, 59, 0.55);
+  box-shadow:
+    0 0 0 1px rgba(255, 48, 59, 0.12),
+    0 0 2.6em -0.3em rgba(255, 35, 50, 0.42),
+    0 1.2em 2.6em -1em #000;
+}
+
+.oc-card[data-depth="2"] {
+  filter: blur(1.5px);
+}
+
+.oc-bob {
+  animation: oc-bob var(--bob, 7s) ease-in-out infinite;
+  animation-delay: var(--bd, 0s);
+}
+
+.oc-spark {
+  position: absolute;
+  border-radius: 9999px;
+  background: #ff4a55;
+  box-shadow: 0 0 6px 1px rgba(255, 48, 59, 0.7);
+  animation: oc-twinkle var(--dur, 4s) ease-in-out infinite;
+  animation-delay: var(--del, 0s);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oc-card,
+  .oc-bob,
+  .oc-spark {
+    animation: none;
+  }
+}
+
+/* status colours: a darker shade on light surfaces, the bright one on dark */
+.oc-tone {
+  color: var(--tl);
+}
+.oc-tone-bg {
+  background: var(--tl);
+}
+.oc-tone-soft {
+  color: var(--tl);
+  background: color-mix(in srgb, var(--tl) 14%, transparent);
+}
+.dark .oc-tone {
+  color: var(--td);
+}
+.dark .oc-tone-bg {
+  background: var(--td);
+}
+.dark .oc-tone-soft {
+  color: var(--td);
+  background: color-mix(in srgb, var(--td) 14%, transparent);
+}
+
+/* The three card sets stay mounted. Switching steps only cross-fades them with
+   opacity and transform, so nothing is rebuilt and nothing flickers. */
+.oc-layer {
+  opacity: 0;
+  transform: translate3d(0, 10px, 0) scale(0.985);
+  transition:
+    opacity 0.6s ease,
+    transform 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.oc-layer[data-active] {
+  opacity: 1;
+  transform: none;
+  transition-delay: 0s;
+}
+
+/* hidden sets do not animate at all */
+.oc-layer:not([data-active]) .oc-bob {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oc-layer {
+    transition: none;
+  }
+}
+
+/* A whole screen (text + window). Same idea as the card layers: always
+   mounted, switched with opacity and transform only. */
+.oc-scene {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(0, 14px, 0);
+  transition:
+    opacity 0.5s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.oc-scene[data-state="before"] {
+  transform: translate3d(0, -10px, 0);
+}
+
+.oc-scene[data-state="current"] {
+  opacity: 1;
+  pointer-events: auto;
+  transform: none;
+  transition-delay: 0s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .oc-scene {
+    transition: none;
+  }
+}
